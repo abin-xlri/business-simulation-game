@@ -2,14 +2,21 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy package files from backend
-COPY backend/package*.json ./
+# Copy package files and prisma schema
+COPY package*.json ./
+COPY backend/package*.json ./backend/
+COPY shared/package*.json ./shared/
+COPY backend/prisma ./backend/prisma/
 
 # Install dependencies
 RUN npm install
+RUN cd backend && npx prisma generate
 
-# Copy source code from backend
-COPY backend/src ./src
+# Copy source code
+COPY . .
+
+# Build the application
+RUN npm run build
 
 # Set environment variables
 ENV NODE_ENV=production
@@ -19,4 +26,4 @@ ENV PORT=3001
 EXPOSE 3001
 
 # Start the server
-CMD ["node", "src/index.js"]
+CMD ["node", "backend/dist/src/index.js"]
