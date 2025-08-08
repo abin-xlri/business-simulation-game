@@ -1,14 +1,17 @@
 [phases.setup]
-aptPkgs = ["nodejs", "npm"]
+aptPkgs = ["nodejs", "npm", "nginx"]
 
 [phases.install]
 cmds = ["npm run install:all"]
 
 [phases.build]
-cmds = ["npm run build"]
+cmds = ["npm run build", "cp -r frontend/dist /tmp/frontend-dist", "mkdir -p /etc/nginx/conf.d", "cp nginx.conf /etc/nginx/conf.d/default.conf"]
 
 [start]
-cmd = "node backend/dist/src/index.js"
+cmd = "bash -c 'mkdir -p /var/www/html && cp -r /tmp/frontend-dist/* /var/www/html/ && nginx -g \"daemon off;\" & node backend/dist/src/index.js'"
+
+[nginx]
+port = 3000
 
 [variables]
 NODE_ENV = "production"
