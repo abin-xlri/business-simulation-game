@@ -33,6 +33,10 @@ console.log('Build timestamp: ' + new Date().toISOString());
 
 // Create Express app
 const app = express();
+
+// Enable trust proxy when running behind a reverse proxy
+app.set('trust proxy', true);
+
 const server = createServer(app);
 
 // Normalize and support multiple CORS origins (comma-separated), trim trailing slashes
