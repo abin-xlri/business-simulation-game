@@ -1,34 +1,26 @@
 version: '3.8'
 services:
-  app:
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  backend:
     build: .
     ports:
-      - "3000:3000"
       - "3001:3001"
     environment:
       - NODE_ENV=production
       - PORT=3001
-      - CORS_ORIGIN=https://business-simulation-game.xlri.online
-    labels:
-      - traefik.enable=true
-      - traefik.http.middlewares.gzip.compress=true
-      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
-      - traefik.http.routers.http-0-qkko8s88csogw0gsg8cscwks.entryPoints=http
-      - traefik.http.routers.http-0-qkko8s88csogw0gsg8cscwks.middlewares=redirect-to-https
-      - traefik.http.routers.http-0-qkko8s88csogw0gsg8cscwks.rule=Host(`business-simulation-game.xlri.online`) && PathPrefix(`/`)
-      - traefik.http.routers.http-0-qkko8s88csogw0gsg8cscwks.service=http-0-qkko8s88csogw0gsg8cscwks
-      - traefik.http.routers.https-0-qkko8s88csogw0gsg8cscwks.entryPoints=https
-      - traefik.http.routers.https-0-qkko8s88csogw0gsg8cscwks.middlewares=gzip
-      - traefik.http.routers.https-0-qkko8s88csogw0gsg8cscwks.rule=Host(`business-simulation-game.xlri.online`) && PathPrefix(`/`)
-      - traefik.http.routers.https-0-qkko8s88csogw0gsg8cscwks.service=https-0-qkko8s88csogw0gsg8cscwks
-      - traefik.http.routers.https-0-qkko8s88csogw0gsg8cscwks.tls.certresolver=letsencrypt
-      - traefik.http.routers.https-0-qkko8s88csogw0gsg8cscwks.tls=true
-      - traefik.http.services.http-0-qkko8s88csogw0gsg8cscwks.loadbalancer.server.port=3000
-      - traefik.http.services.https-0-qkko8s88csogw0gsg8cscwks.loadbalancer.server.port=3000
-      - caddy_0.encode=zstd gzip
-      - caddy_0.handle_path.0_reverse_proxy={{upstreams 3000}}
-      - caddy_0.handle_path=/*
-      - caddy_0.header=-Server
-      - caddy_0.try_files={path} /index.html /index.php
-      - caddy_0= `https://business-simulation-game.xlri.online`
-      - caddy_ingress_network=coolify
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
