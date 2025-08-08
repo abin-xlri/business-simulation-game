@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: business-simulation-backend
+    runtime: node
+    plan: starter
+    buildCommand: npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+
+databases:
+  - name: business-simulation-db
+    databaseName: business_simulation
+    user: business_simulation_user
+    plan: starter 

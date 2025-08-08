@@ -1,0 +1,69 @@
+Path: /api/health
+
+Retry window: 5m0s
+
+ 
+
+Attempt #1 failed with status 404: <!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+
+<title>Error</title>
+
+</head>
+
+<body>
+
+<pre>Cannot GET /api/health</pre>
+
+</body>
+
+</html>
+
+. Continuing to retry for 4m58s
+
+Attempt #2 failed with status 404: <!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+
+<title>Error</title>
+
+</head>
+
+<body>
+
+<pre>Cannot GET /api/health</pre>
+
+</body>
+
+</html>
+
+. Continuing to retry for 4m56s
+
+Attempt #3 failed with status 404: <!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+
+<title>Error</title>
+
+</head>
+
+<body>
+
+<pre>Cannot GET /api/health</pre>
+
+</body>
+
+</html>

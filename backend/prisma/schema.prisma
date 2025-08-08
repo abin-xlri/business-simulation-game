@@ -1,0 +1,667 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Authentication and Session Management Models
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      UserRole @default(STUDENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userSessions UserSession[]
+  routeCalculations RouteCalculation[]
+  partnerSelections PartnerSelection[]
+  groupMembers GroupMember[]
+  groupMessages GroupMessage[]
+  groupDecisions GroupDecision[]
+  crisisWebSubmissions CrisisWebSubmission[]
+  reactivationSequences ReactivationSequence[]
+  behavioralIndicators BehavioralIndicator[]
+  finalReports FinalReport[]
+
+  @@map("users")
+}
+
+model Session {
+  id               String        @id @default(cuid())
+  name             String
+  code             String        @unique
+  status           SessionStatus @default(WAITING)
+  currentRound     Int           @default(1)
+  maxParticipants  Int           @default(10)
+  // Orchestration fields for automated simulation flow
+  task             SessionTask   @default(LOBBY)
+  startedAt        DateTime?
+  endsAt           DateTime?
+  taskStartedAt    DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  // Relations
+  userSessions UserSession[]
+  routeCalculations RouteCalculation[]
+  partnerSelections PartnerSelection[]
+  groups Group[]
+  crisisWebSubmissions CrisisWebSubmission[]
+  reactivationSequences ReactivationSequence[]
+  behavioralIndicators BehavioralIndicator[]
+  finalReports FinalReport[]
+
+  @@map("sessions")
+}
+
+model UserSession {
+  id        String   @id @default(cuid())
+  joinedAt  DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId String
+
+  @@unique([userId, sessionId])
+  @@map("user_sessions")
+}
+
+model Player {
+  id        String   @id @default(cuid())
+  name      String
+  balance   Float    @default(1000000)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  company   Company? @relation(fields: [companyId], references: [id])
+  companyId String?  @unique
+
+  @@map("players")
+}
+
+model Company {
+  id      String @id @default(cuid())
+  name    String
+  industry Industry
+
+  // Relations
+  player   Player?
+  playerId String? @unique
+
+  products   Product[]
+  employees  Employee[]
+  facilities Facility[]
+  marketing  Marketing?
+  marketingId String? @unique
+  research   Research?
+  researchId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("companies")
+}
+
+model Product {
+  id              String @id @default(cuid())
+  name            String
+  price           Float
+  cost            Float
+  quality         Float  @default(0)
+  demand          Float  @default(0)
+  supply          Float  @default(0)
+  marketingBudget Float  @default(0)
+  researchLevel   Int    @default(1)
+
+  // Relations
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("products")
+}
+
+model Employee {
+  id           String   @id @default(cuid())
+  name         String
+  position     Position
+  salary       Float
+  productivity Float    @default(0.5)
+  satisfaction Float    @default(0.5)
+
+  // Relations
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String
+
+  employeeSkills EmployeeSkill[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("employees")
+}
+
+model EmployeeSkill {
+  id String @id @default(cuid())
+
+  // Relations
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId String
+  skill      Skill
+
+  @@map("employee_skills")
+}
+
+model Facility {
+  id              String       @id @default(cuid())
+  name            String
+  type            FacilityType
+  capacity        Int
+  efficiency      Float        @default(0.5)
+  maintenanceCost Float
+  location        String
+
+  // Relations
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("facilities")
+}
+
+model Marketing {
+  id                  String @id @default(cuid())
+  budget              Float  @default(0)
+  brandAwareness      Float  @default(0)
+  customerSatisfaction Float @default(0)
+
+  // Relations
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String  @unique
+
+  campaigns MarketingCampaign[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("marketing")
+}
+
+model MarketingCampaign {
+  id             String   @id @default(cuid())
+  name           String
+  budget         Float
+  targetAudience String
+  effectiveness  Float    @default(0)
+  startDate      DateTime
+  endDate        DateTime
+
+  // Relations
+  marketing   Marketing @relation(fields: [marketingId], references: [id], onDelete: Cascade)
+  marketingId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("marketing_campaigns")
+}
+
+model Research {
+  id               String @id @default(cuid())
+  budget           Float  @default(0)
+  technologyLevel  Int    @default(1)
+  innovationScore  Float  @default(0)
+
+  // Relations
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String  @unique
+
+  projects ResearchProject[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("research")
+}
+
+model ResearchProject {
+  id                  String   @id @default(cuid())
+  name                String
+  budget              Float
+  progress            Float    @default(0)
+  expectedCompletion  DateTime
+  potentialImpact     Float    @default(0)
+
+  // Relations
+  research   Research @relation(fields: [researchId], references: [id], onDelete: Cascade)
+  researchId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("research_projects")
+}
+
+model GameEvent {
+  id          String        @id @default(cuid())
+  type        GameEventType
+  title       String
+  description String
+  impactType  String        // 'positive', 'negative', 'neutral'
+  magnitude   Float
+  duration    Int           // in game days
+  createdAt   DateTime      @default(now())
+
+  // Relations
+  affectedIndustries GameEventIndustry[]
+
+  @@map("game_events")
+}
+
+model GameEventIndustry {
+  id String @id @default(cuid())
+
+  // Relations
+  gameEvent GameEvent @relation(fields: [gameEventId], references: [id], onDelete: Cascade)
+  gameEventId String
+  industry    Industry
+
+  @@map("game_event_industries")
+}
+
+// Cold Chain Delivery Models for Round 1 Task 1
+model Station {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  riskLevel RiskLevel
+  region    Region
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  routeSegmentsFrom RouteSegment[] @relation("FromStation")
+  routeSegmentsTo   RouteSegment[] @relation("ToStation")
+
+  @@map("stations")
+}
+
+model RouteSegment {
+  id        String   @id @default(cuid())
+  fromCode  String
+  toCode    String
+  distance  Float    // in kilometers
+  speed     Float    // in km/h
+  time      Float    // calculated time in hours
+
+  // Relations
+  fromStation Station @relation("FromStation", fields: [fromCode], references: [code])
+  toStation   Station @relation("ToStation", fields: [toCode], references: [code])
+
+  @@unique([fromCode, toCode])
+  @@map("route_segments")
+}
+
+model RouteCalculation {
+  id              String   @id @default(cuid())
+  userId          String
+  sessionId       String
+  route           String[] // Array of station codes
+  totalDistance   Float
+  totalTime       Float
+  coldChainBreaches Int
+  baseRevenue     Float
+  regionalModifier Float
+  operatingCosts  Float
+  penalties       Float
+  netProfit       Float
+  calculatedAt    DateTime @default(now())
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("route_calculations")
+}
+
+// Partner Selection Model for Round 1 Task 2
+model PartnerSelection {
+  id          String   @id @default(cuid())
+  userId      String
+  sessionId   String
+  partnerId   String   // A, B, C, or D
+  score       Float    // Calculated weighted score
+  selectedAt  DateTime @default(now())
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("partner_selections")
+}
+
+// Group Formation and Collaboration Models
+model Group {
+  id          String   @id @default(cuid())
+  sessionId   String
+  name        String
+  taskType    GroupTaskType
+  status      GroupStatus @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  session     Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  members     GroupMember[]
+  messages    GroupMessage[]
+  decisions   GroupDecision[]
+
+  @@map("groups")
+}
+
+model GroupMember {
+  id        String   @id @default(cuid())
+  groupId   String
+  userId    String
+  role      GroupRole @default(MEMBER)
+  joinedAt  DateTime @default(now())
+
+  // Relations
+  group     Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@map("group_members")
+}
+
+model GroupMessage {
+  id        String   @id @default(cuid())
+  groupId   String
+  userId    String
+  message   String
+  messageType MessageType @default(CHAT)
+  createdAt DateTime @default(now())
+
+  // Relations
+  group     Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("group_messages")
+}
+
+model GroupDecision {
+  id          String   @id @default(cuid())
+  groupId     String
+  userId      String
+  taskType    GroupTaskType
+  decision    Json     // Store decision data as JSON
+  status      DecisionStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  group       Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user        User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("group_decisions")
+}
+
+// Crisis Management Models
+model CrisisWebSubmission {
+  id                String   @id @default(cuid())
+  userId            String
+  sessionId         String
+  scenarioId        String
+  selectedAdvisors  String[] // Array of advisor IDs
+  selectedActions   String[] // Array of action IDs
+  totalCost         Int
+  effectiveness     Float
+  riskLevel         String
+  submittedAt       DateTime @default(now())
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("crisis_web_submissions")
+}
+
+model ReactivationSequence {
+  id                 String   @id @default(cuid())
+  userId             String
+  sessionId          String
+  sequence           String[] // Array of node IDs in order
+  totalDuration      Int      // Total duration in hours
+  criticalPathTime   Int      // Critical path time in hours
+  riskScore          Float
+  resourceUtilization Json    // Store resource utilization as JSON
+  submittedAt        DateTime @default(now())
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("reactivation_sequences")
+}
+
+// Comprehensive Scoring System Models
+model Competency {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  category    CompetencyCategory
+  weight      Float    @default(1.0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  taskCompetencies TaskCompetency[]
+  behavioralIndicators BehavioralIndicator[]
+
+  @@map("competencies")
+}
+
+model TaskCompetency {
+  id           String   @id @default(cuid())
+  taskType     TaskType
+  competencyId String
+  weight       Float    @default(1.0)
+  createdAt    DateTime @default(now())
+
+  // Relations
+  competency Competency @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+
+  @@unique([taskType, competencyId])
+  @@map("task_competencies")
+}
+
+model BehavioralIndicator {
+  id           String   @id @default(cuid())
+  userId       String
+  sessionId    String
+  competencyId String
+  taskType     TaskType
+  score        Float
+  evidence     Json     // Store evidence data as JSON
+  createdAt    DateTime @default(now())
+
+  // Relations
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session    Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  competency Competency @relation(fields: [competencyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sessionId, competencyId, taskType])
+  @@map("behavioral_indicators")
+}
+
+model FinalReport {
+  id           String   @id @default(cuid())
+  sessionId    String
+  userId       String
+  totalScore   Float
+  rank         Int
+  competencyScores Json // Store competency scores as JSON
+  feedback     Json     // Store detailed feedback as JSON
+  generatedAt  DateTime @default(now())
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@map("final_reports")
+}
+
+// Group-related Enums
+enum GroupTaskType {
+  MARKET_SELECTION
+  BUDGET_ALLOCATION
+}
+
+enum GroupStatus {
+  ACTIVE
+  COMPLETED
+  DISBANDED
+}
+
+enum GroupRole {
+  LEADER
+  MEMBER
+}
+
+enum MessageType {
+  CHAT
+  SYSTEM
+  DECISION
+}
+
+enum DecisionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Enums
+enum Industry {
+  TECHNOLOGY
+  MANUFACTURING
+  RETAIL
+  HEALTHCARE
+  FINANCE
+  ENTERTAINMENT
+}
+
+enum Position {
+  CEO
+  CTO
+  CFO
+  MANAGER
+  DEVELOPER
+  SALES
+  MARKETING
+  RESEARCH
+}
+
+enum Skill {
+  LEADERSHIP
+  TECHNICAL
+  SALES
+  MARKETING
+  RESEARCH
+  MANAGEMENT
+}
+
+enum FacilityType {
+  OFFICE
+  FACTORY
+  WAREHOUSE
+  LABORATORY
+  STORE
+}
+
+enum GameEventType {
+  MARKET_CRASH
+  BOOM
+  COMPETITION
+  INNOVATION
+  REGULATION
+  NATURAL_DISASTER
+}
+
+// Authentication and Session Management Enums
+enum UserRole {
+  STUDENT
+  ADMIN
+}
+
+enum SessionStatus {
+  WAITING
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+// Session orchestration task states
+enum SessionTask {
+  LOBBY
+  ROUND1_TASK1
+  ROUND1_TASK2
+  ROUND2_MARKET_SELECTION
+  ROUND2_BUDGET_ALLOCATION
+  ROUND3_CRISIS_WEB
+  ROUND3_REACTIVATION_CHALLENGE
+  COMPLETED
+}
+
+// Cold Chain Delivery Enums
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum Region {
+  URBAN
+  RURAL
+  SUBURBAN
+}
+
+// Comprehensive Scoring System Enums
+enum CompetencyCategory {
+  ANALYTICAL_THINKING
+  STRATEGIC_PLANNING
+  COLLABORATION
+  LEADERSHIP
+  PROBLEM_SOLVING
+  DECISION_MAKING
+  COMMUNICATION
+  ADAPTABILITY
+  INNOVATION
+  EXECUTION
+}
+
+enum TaskType {
+  ROUND1_TASK1_ROUTE_OPTIMIZATION
+  ROUND1_TASK2_PARTNER_SELECTION
+  ROUND2_GROUP_MARKET_SELECTION
+  ROUND2_GROUP_BUDGET_ALLOCATION
+  ROUND3_TASK1_CRISIS_WEB
+  ROUND3_TASK2_REACTIVATION_CHALLENGE
+} 

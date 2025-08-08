@@ -1,0 +1,1 @@
+{"version":3,"file":"groupData.d.ts","sourceRoot":"","sources":["../../src/constants/groupData.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,aAAa,EAAE,cAAc,EAAE,MAAM,oCAAoC,CAAC;AAGnF,eAAO,MAAM,gBAAgB,EAAE,aAAa,EAuD3C,CAAC;AAGF,eAAO,MAAM,gBAAgB,EAAE,cAAc,EAuD5C,CAAC;AAGF,eAAO,MAAM,wBAAwB;;;;;CAKpC,CAAC;AAGF,eAAO,MAAM,yBAAyB;;;;CAIrC,CAAC;AAGF,eAAO,MAAM,YAAY;;;;;;CAMxB,CAAC"}

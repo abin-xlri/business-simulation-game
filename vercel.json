@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "buildCommand": "cd frontend && npm install --no-audit --no-fund --prefer-offline && npm run build",
+  "outputDirectory": "frontend/dist",
+  "framework": null,
+  "routes": [
+    { "src": "/[^.]+", "dest": "/index.html" }
+  ]
+} 
