@@ -10,6 +10,8 @@ COPY backend/prisma ./backend/prisma/
 
 # Install dependencies
 RUN npm install
+
+# Generate Prisma client
 RUN cd backend && npx prisma generate
 
 # Copy source code
