@@ -42,6 +42,14 @@ if (!rootElement) {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
+            <div style={{ padding: '20px', border: '1px solid #ccc', margin: '10px', backgroundColor: '#f0f0f0' }}>
+              <h3>Environment Variables (Debug)</h3>
+              <p><strong>NODE_ENV:</strong> {import.meta.env.NODE_ENV}</p>
+              <p><strong>VITE_API_URL:</strong> {import.meta.env.VITE_API_URL}</p>
+              <p><strong>VITE_SOCKET_URL:</strong> {import.meta.env.VITE_SOCKET_URL}</p>
+              <p><strong>MODE:</strong> {import.meta.env.MODE}</p>
+              <p><strong>BASE_URL:</strong> {import.meta.env.BASE_URL}</p>
+            </div>
             <>
               <Toaster position="top-center" />
               <App />
@@ -57,4 +65,4 @@ if (!rootElement) {
       <Bootstrap />
     </React.StrictMode>,
   )
-} 
+}
