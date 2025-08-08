@@ -234,7 +234,7 @@ export const joinSession = async (req: Request, res: Response) => {
 
     // Check if user is already in the session
     const existingUserSession = session.userSessions.find(
-      us => us.user.id === user.userId
+      (us: any) => us.user.id === user.userId
     );
 
     if (existingUserSession) {
@@ -342,4 +342,4 @@ export const validateCreateSession = [
 
 export const validateJoinSession = [
   body('code').trim().isLength({ min: 6, max: 6 })
-]; 
+];
