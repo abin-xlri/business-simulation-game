@@ -22,8 +22,8 @@ export default function HomePage() {
 
   useEffect(() => {
     // Check environment variables
-    const apiUrl = "https://business-simulation-game.xlri.online/api"
-    const socketUrl = "https://business-simulation-game.xlri.online"
+    const apiUrl = import.meta.env.VITE_API_URL
+    const socketUrl = import.meta.env.VITE_SOCKET_URL
     
     if (!apiUrl || !socketUrl) {
       setEnvError('Environment variables are not configured. Please check VITE_API_URL and VITE_SOCKET_URL.')
