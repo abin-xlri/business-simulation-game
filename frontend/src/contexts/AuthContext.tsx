@@ -67,6 +67,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setToken(data.token);
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      // ensure axios instance picks up the token immediately for subsequent calls
+      (apiClient.defaults.headers as any).Authorization = `Bearer ${data.token}`;
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Login failed');
       throw error;
@@ -86,6 +88,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setToken(data.token);
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      (apiClient.defaults.headers as any).Authorization = `Bearer ${data.token}`;
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Registration failed');
       throw error;

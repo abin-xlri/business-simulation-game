@@ -26,9 +26,17 @@ export const useGroupSocket = (): UseGroupSocketReturn => {
   useEffect(() => {
     if (!token) return;
 
-    const socket = io(import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || 'http://localhost:3001', {
+    const socketBase = (import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || 'http://localhost:3001')
+      .toString()
+      .replace(/\/$/, '')
+      .replace(/\/api$/, '')
+    const socket = io(socketBase, {
       auth: { token },
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 15000,
     });
 
     socketRef.current = socket;

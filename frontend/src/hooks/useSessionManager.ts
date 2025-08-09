@@ -40,6 +40,13 @@ export const useSessionManager = () => {
       }
     };
 
+    // Ensure we are in the correct session room for receiving scoped events
+    try {
+      if (sessionId) {
+        socket.emit('user:join-session-room', { sessionId });
+      }
+    } catch {}
+
     socket.on('session:task:changed', handleTaskChange);
 
     return () => {

@@ -11,9 +11,71 @@ import {
 } from '../../../shared/types/admin';
 
 export const adminService = {
+  // Users Management
+  async listUsers(): Promise<Array<{ id: string; email: string; name: string; role: 'ADMIN' | 'STUDENT' }>> {
+    const response = await apiClient.get('/admin/users');
+    return response.data.users;
+  },
+
+  async deleteSession(sessionId: string): Promise<{ success: boolean }> {
+    const response = await apiClient.delete(`/admin/sessions/${sessionId}`);
+    return response.data;
+  },
+
+  async createUser(user: { email: string; name: string; role?: 'ADMIN' | 'STUDENT'; password?: string }) {
+    const response = await apiClient.post('/admin/users', user);
+    return response.data.user;
+  },
+
+  async updateUser(userId: string, user: Partial<{ email: string; name: string; role: 'ADMIN' | 'STUDENT'; password: string }>) {
+    const response = await apiClient.patch(`/admin/users/${userId}`, user);
+    return response.data.user;
+  },
+
+  async resetPassword(userId: string, newPassword: string): Promise<{ success: boolean }> {
+    await apiClient.patch(`/admin/users/${userId}`, { password: newPassword });
+    return { success: true };
+  },
+
+  async deleteUser(userId: string) {
+    const response = await apiClient.delete(`/admin/users/${userId}`);
+    return response.data.success as boolean;
+  },
   // Session Management
   async getSessions(): Promise<SessionSummary[]> {
-    const response = await apiClient.get('/admin/sessions');
+    try {
+      const response = await apiClient.get('/admin/sessions');
+      return response.data;
+    } catch (err: any) {
+      if (err?.response?.status === 404) {
+        // Backend does not expose admin sessions endpoint in this environment
+        return [] as SessionSummary[];
+      }
+      throw err;
+    }
+  },
+
+  async createSession(data: { name: string; maxParticipants: number }): Promise<SessionSummary> {
+    try {
+      const response = await apiClient.post('/admin/sessions', data);
+      return response.data.session;
+    } catch (err: any) {
+      // Fallback for environments without /admin/sessions route
+      if (err?.response?.status === 404) {
+        const alt = await apiClient.post('/auth/session/create', data);
+        return alt.data.session as SessionSummary;
+      }
+      throw err;
+    }
+  },
+
+  async addParticipants(sessionId: string, emails: string[]): Promise<{ success: boolean; added: number }> {
+    const response = await apiClient.post(`/admin/sessions/${sessionId}/participants`, { emails });
+    return response.data;
+  },
+
+  async removeParticipant(sessionId: string, userId: string): Promise<{ success: boolean }> {
+    const response = await apiClient.delete(`/admin/sessions/${sessionId}/participants/${userId}`);
     return response.data;
   },
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Hash, Users, Play } from 'lucide-react';
+import { useSocket } from '../hooks/useSocket';
 
 const JoinSessionPage: React.FC = () => {
   const [sessionCode, setSessionCode] = useState('');
@@ -10,6 +11,7 @@ const JoinSessionPage: React.FC = () => {
   const [sessionInfo, setSessionInfo] = useState<any>(null);
 
   const { token } = useAuth();
+  const { emit } = useSocket();
   const navigate = useNavigate();
 
   const apiBase = import.meta.env.VITE_API_URL || '';
@@ -36,10 +38,12 @@ const JoinSessionPage: React.FC = () => {
       }
 
       setSessionInfo(data.session);
+      try { sessionStorage.setItem('currentSession', JSON.stringify({ session: data.session })) } catch {}
+      try { emit('user:join-session-room', { sessionId: data.session.id }) } catch {}
       
       // Redirect to game page after successful join
       setTimeout(() => {
-        navigate('/game');
+        navigate('/dashboard');
       }, 2000);
 
     } catch (error) {

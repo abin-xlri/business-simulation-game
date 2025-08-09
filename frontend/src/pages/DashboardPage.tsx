@@ -158,7 +158,7 @@ const DashboardPage: React.FC = () => {
 
           {user?.role === 'ADMIN' && (
             <button
-              onClick={() => navigate('/create-session')}
+              onClick={() => navigate('/admin')}
               className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow border-2 border-dashed border-gray-300 hover:border-green-300"
             >
               <div className="flex items-center space-x-3">

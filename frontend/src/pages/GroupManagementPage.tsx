@@ -42,7 +42,6 @@ const GroupManagementPage: React.FC = () => {
   // Create group form state
   const [createForm, setCreateForm] = useState({
     name: '',
-    taskType: 'MARKET_SELECTION' as GroupTaskType,
     memberIds: [] as string[]
   });
 
@@ -104,7 +103,7 @@ const GroupManagementPage: React.FC = () => {
       const response = await GroupApiService.createGroup(createGroupData);
       setGroups(prev => [response.group, ...prev]);
       setShowCreateForm(false);
-      setCreateForm({ name: '', taskType: 'MARKET_SELECTION' as GroupTaskType, memberIds: [] });
+      setCreateForm({ name: '', memberIds: [] });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create group');
     }
@@ -313,19 +312,7 @@ const GroupManagementPage: React.FC = () => {
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Task Type
-                </label>
-                <select
-                  value={createForm.taskType}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, taskType: e.target.value as GroupTaskType }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="MARKET_SELECTION">Market Selection</option>
-                  <option value="BUDGET_ALLOCATION">Budget Allocation</option>
-                </select>
-              </div>
+              {/* Task type is determined automatically from the session stage */}
               <div className="flex space-x-3 pt-4">
                 <button
                   type="button"

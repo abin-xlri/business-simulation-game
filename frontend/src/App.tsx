@@ -19,11 +19,19 @@ import GroupManagementPage from './pages/GroupManagementPage'
 import { Round3Page } from './pages/Round3Page'
 import AdminDashboard from './pages/AdminDashboard'
 import SimulationLayout from './components/SimulationLayout'
+import { useGlobalTaskRedirect } from './hooks/useGlobalTaskRedirect'
 
 function App() {
+  // Globally listen for orchestrator task changes and redirect students accordingly
+  function OrchestratorListener() {
+    useGlobalTaskRedirect();
+    return null;
+  }
+
   return (
     <AuthProvider>
       <SocketProvider>
+        <OrchestratorListener />
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<HomePage />} />

@@ -10,11 +10,14 @@ import {
 import { Round1ApiService } from '../services/round1Api';
 import { Station, RouteCalculationResult } from '../../../shared/types/round1';
 import Timer from '../components/Timer';
+import { useSessionManager } from '../hooks/useSessionManager';
 import StationSelector from '../components/StationSelector';
 import RouteVisualizer from '../components/RouteVisualizer';
 import CalculationDisplay from '../components/CalculationDisplay';
 
 const Round1Task1Page: React.FC = () => {
+  // Ensure we listen and redirect on orchestrator task changes for this route too
+  useSessionManager();
   const navigate = useNavigate();
   const { sessionId } = useParams<{ sessionId: string }>();
   const [stations, setStations] = useState<Station[]>([]);

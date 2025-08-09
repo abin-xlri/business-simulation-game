@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useSessionManager } from '../hooks/useSessionManager';
 import apiClient from '../services/apiClient';
+import { useSocket } from '../hooks/useSocket';
 
 type SessionTask =
   | 'LOBBY'
@@ -26,6 +27,7 @@ const TASK_TO_PATH_MAP: Record<SessionTask, (sessionId: string) => string> = {
 
 const SimulationLayout: React.FC = () => {
   useSessionManager();
+  const { socket } = useSocket();
   const [checking, setChecking] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
@@ -36,6 +38,8 @@ const SimulationLayout: React.FC = () => {
       try {
         const { data } = await apiClient.get('/auth/session/current');
         const session = data.session as { id: string; task?: SessionTask };
+        // cache for other parts (e.g., joinGame)
+        try { sessionStorage.setItem('currentSession', JSON.stringify({ session })) } catch {}
         if (!session?.id || !session?.task) {
           setChecking(false);
           return;
@@ -44,6 +48,8 @@ const SimulationLayout: React.FC = () => {
         if (target && location.pathname + location.search !== target) {
           navigate(target, { replace: true });
         }
+        // Also attempt to join the session room immediately so we receive future task changes
+        try { if (socket) socket.emit('user:join-session-room', { sessionId: session.id }); } catch {}
       } catch {
         // ignore
       } finally {

@@ -11,12 +11,13 @@ import {
   X
 } from 'lucide-react'
 import { useState } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 
 interface LayoutProps {
   children: ReactNode
 }
 
-const navigation = [
+const baseNavigation = [
   { name: 'Home', href: '/', icon: Home },
   { name: 'Game', href: '/game', icon: Gamepad2 },
   { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
@@ -28,6 +29,11 @@ const navigation = [
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { user } = useAuth()
+
+  const navigation = user?.role === 'ADMIN'
+    ? [...baseNavigation, { name: 'Admin', href: '/admin', icon: BarChart3 }]
+    : baseNavigation
 
   return (
     <div className="min-h-screen bg-gray-50">

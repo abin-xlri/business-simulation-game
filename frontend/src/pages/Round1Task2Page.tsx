@@ -15,10 +15,13 @@ import {
 import { PartnerSelectionApiService } from '../services/partnerSelectionApi';
 import { Partner, PartnerScore, PartnerSelection } from '../../../shared/types/partnerSelection';
 import Timer from '../components/Timer';
+import { useSessionManager } from '../hooks/useSessionManager';
 import PartnerComparisonTable from '../components/PartnerComparisonTable';
 import PartnerSelectionInterface from '../components/PartnerSelectionInterface';
 
 const Round1Task2Page: React.FC = () => {
+  // Ensure we listen for orchestrator task changes while on this page
+  useSessionManager();
   const navigate = useNavigate();
   const { sessionId } = useParams<{ sessionId: string }>();
   const [partners, setPartners] = useState<Partner[]>([]);
@@ -159,7 +162,7 @@ const Round1Task2Page: React.FC = () => {
               </div>
               
               <Timer
-                duration={10 * 60} // 10 minutes
+                duration={10} // 10 minutes
                 onTimeUp={handleTimeUp}
                 isRunning={!isSubmitted}
                 onToggle={() => {}}

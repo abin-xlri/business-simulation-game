@@ -18,7 +18,8 @@ const Timer: React.FC<TimerProps> = ({
   onToggle 
 }) => {
   const { socket } = useSocket();
-  const [internalTimeLeft, setInternalTimeLeft] = useState(duration ? duration * 60 : 0); // Convert to seconds
+  const [internalTimeLeft, setInternalTimeLeft] = useState(duration ? duration * 60 : 0); // seconds
+  const [totalDurationSec, setTotalDurationSec] = useState(duration ? duration * 60 : 0);
   const timeLeft = externalTimeLeft !== undefined ? externalTimeLeft : internalTimeLeft;
   const [isActive, setIsActive] = useState(isRunning);
 
@@ -67,16 +68,28 @@ const Timer: React.FC<TimerProps> = ({
   useEffect(() => {
     if (!socket) return;
     const handler = (data: { taskType: string; duration: number; action: 'start' | 'pause' | 'reset'; startTime?: string | null }) => {
+      // duration from server is expected in SECONDS
       if (data.action === 'reset') {
         setIsActive(false);
-        if (duration) setInternalTimeLeft(duration * 60);
+        setInternalTimeLeft(data.duration);
+        setTotalDurationSec(data.duration);
       }
       if (data.action === 'pause') {
         setIsActive(false);
       }
       if (data.action === 'start') {
         setIsActive(true);
-        setInternalTimeLeft(data.duration);
+        // If server provided an absolute start time, derive remaining from now
+        if (data.startTime) {
+          const start = new Date(data.startTime).getTime();
+          const elapsed = Math.floor((Date.now() - start) / 1000);
+          const remaining = Math.max(0, data.duration - elapsed);
+          setInternalTimeLeft(remaining);
+          setTotalDurationSec(data.duration);
+        } else {
+          setInternalTimeLeft(data.duration);
+          setTotalDurationSec(data.duration);
+        }
       }
     };
     socket.on('timer-update', handler);
@@ -136,7 +149,7 @@ const Timer: React.FC<TimerProps> = ({
               'bg-blue-500'
             }`}
             style={{ 
-              width: `${Math.max(0, (timeLeft / (duration ? duration * 60 : timeLeft)) * 100)}%` 
+              width: `${Math.max(0, (timeLeft / (totalDurationSec || timeLeft)) * 100)}%` 
             }}
           />
         </div>
