@@ -4,10 +4,7 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  define: {
-    'import.meta.env.VITE_API_URL': JSON.stringify('https://business-simulation-game.xlri.online/api'),
-    'import.meta.env.VITE_SOCKET_URL': JSON.stringify('https://business-simulation-game.xlri.online'),
-  },
+
   base: '/',
   plugins: [react()],
   resolve: {

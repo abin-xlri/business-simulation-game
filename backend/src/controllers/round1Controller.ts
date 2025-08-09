@@ -63,68 +63,13 @@ export const calculateRoute = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Must visit 4 unique stations' });
     }
 
-    // Calculate distances, times, breaches, revenues, costs, profit
-    let totalDistance = 0;
-    let totalTime = 0;
-    let coldChainBreaches = 0;
-    let baseRevenue = 0;
-    let regionalModifier = 0;
-    let operatingCosts = 0;
-    let penalties = 0;
-
-    // Loop through segments
-    for (let i = 0; i < route.length - 1; i++) {
-      const from = route[i];
-      const to = route[i + 1];
-      
-      // Find segment data
-      const segment = ROUTE_SEGMENTS.find(
-        s => (s.fromCode === from && s.toCode === to) ||
-             (s.fromCode === to && s.toCode === from)
-      );
-
-      if (!segment) {
-        return res.status(400).json({
-          error: `No route segment found between ${from} and ${to}`
-        });
-      }
-
-      totalDistance += segment.distance;
-      const travelTime = segment.distance / segment.speed;
-      totalTime += travelTime;
-
-      // Add delivery time if not return to J
-      if (to !== 'J') {
-        totalTime += 0.5; // 30 minutes
-      }
-
-      // Cold chain breach check (only if followed by delivery)
-      if (travelTime > MAX_SEGMENT_TIME && to !== 'J') {
-        coldChainBreaches++;
-        penalties += COLD_CHAIN_PENALTY;
-      }
-
-      // Revenue if delivery stop
-      if (to !== 'J') {
-        const station = STATIONS.find(s => s.code === to);
-        if (station) {
-          baseRevenue += REVENUE_BY_RISK[station.riskLevel];
-          regionalModifier += REGIONAL_MODIFIERS[station.region];
-        }
-      }
-    }
+    // Calculate metrics (includes segments for UI visualizer)
+    const metrics = calculateRouteMetrics(route);
 
     // Enforce 10-hour total route time limit (driving + stops)
-    if (totalTime > 10) {
+    if (metrics.totalTime > 10) {
       return res.status(400).json({ error: 'Total round-trip time exceeds 10 hours' });
     }
-
-    // Operating costs
-    const fuelCost = totalDistance * OPERATING_COSTS.FUEL_COST_PER_KM;
-    const vanCost = Math.ceil(totalTime * 4) / 4 * OPERATING_COSTS.VAN_OPERATING_COST_PER_HOUR; // Round up to 15 mins
-    operatingCosts = fuelCost + vanCost;
-
-    const netProfit = baseRevenue + regionalModifier - operatingCosts - penalties;
 
     // Get user's current session
     const userSession = await prisma.userSession.findFirst({
@@ -137,23 +82,24 @@ export const calculateRoute = async (req: Request, res: Response) => {
     }
 
     // Save to prisma
-    const calculation = await prisma.routeCalculation.create({
+    const calculationRecord = await prisma.routeCalculation.create({
       data: {
         userId: (req as any).user.userId,
         sessionId: userSession.sessionId,
         route,
-        totalDistance,
-        totalTime,
-        coldChainBreaches,
-        baseRevenue,
-        regionalModifier,
-        operatingCosts,
-        penalties,
-        netProfit
+        totalDistance: metrics.totalDistance,
+        totalTime: metrics.totalTime,
+        coldChainBreaches: metrics.coldChainBreaches,
+        baseRevenue: metrics.baseRevenue,
+        regionalModifier: metrics.regionalModifier,
+        operatingCosts: metrics.operatingCosts,
+        penalties: metrics.penalties,
+        netProfit: metrics.netProfit
       }
     });
 
-    res.json(calculation);
+    // Return a typed response including segments for the frontend visualizer
+    res.json({ success: true, calculation: { ...metrics, id: calculationRecord.id } });
 
   } catch (error) {
     console.error('Route calculation error:', error);
@@ -165,12 +111,12 @@ export const calculateRoute = async (req: Request, res: Response) => {
 
 // Implement getStations
 export const getStations = async (req: Request, res: Response) => {
-  res.json(STATIONS);
+  res.json({ success: true, stations: STATIONS });
 };
 
 // Implement getRouteSegments
 export const getRouteSegments = async (req: Request, res: Response) => {
-  res.json(ROUTE_SEGMENTS);
+  res.json({ success: true, segments: ROUTE_SEGMENTS });
 };
 
 export function calculateRouteMetrics(route: string[]): RouteCalculationResult {

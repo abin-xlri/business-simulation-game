@@ -284,12 +284,12 @@ export class ScoringController {
       return null;
     }
 
-    const totalMessages = userGroups.reduce((sum, group) => 
+    const totalMessages = userGroups.reduce((sum: number, group: any) => 
       sum + group.messages.length, 0
     );
 
-    const leadershipRoles = userGroups.filter(group => 
-      group.members.find(m => m.userId === userId)?.role === 'LEADER'
+    const leadershipRoles = userGroups.filter((group: any) => 
+      group.members.find((m: any) => m.userId === userId)?.role === 'LEADER'
     ).length;
 
     const participationScore = Math.min(100, (totalMessages * 10) + (leadershipRoles * 20));
@@ -440,8 +440,8 @@ export class ScoringController {
         }
       });
 
-      const totalMessages = userGroups.reduce((sum, group) => sum + group.messages.length, 0);
-      const totalDecisions = userGroups.reduce((sum, group) => sum + group.decisions.length, 0);
+      const totalMessages = userGroups.reduce((sum: number, group: any) => sum + group.messages.length, 0);
+      const totalDecisions = userGroups.reduce((sum: number, group: any) => sum + group.decisions.length, 0);
 
       return Math.min(100, (totalMessages * 5) + (totalDecisions * 10) + (userGroups.length * 20));
     }
@@ -681,16 +681,18 @@ export class ScoringController {
         }
       });
 
-      return {
-        id: finalReport.id,
-        sessionId: finalReport.sessionId,
-        userId: finalReport.userId,
-        totalScore: finalReport.totalScore,
-        rank: finalReport.rank,
-        competencyScores: JSON.parse(finalReport.competencyScores as string) as CompetencyScore[],
-        feedback: JSON.parse(finalReport.feedback as string) as FeedbackItem[],
-        generatedAt: finalReport.generatedAt.toISOString()
-      };
+      res.json({
+        report: {
+          id: finalReport.id,
+          sessionId: finalReport.sessionId,
+          userId: finalReport.userId,
+          totalScore: finalReport.totalScore,
+          rank: finalReport.rank,
+          competencyScores: JSON.parse(finalReport.competencyScores as string) as CompetencyScore[],
+          feedback: JSON.parse(finalReport.feedback as string) as FeedbackItem[],
+          generatedAt: finalReport.generatedAt.toISOString()
+        }
+      });
     } catch (error) {
       console.error('Error generating final report:', error);
       res.status(500).json({ error: 'Failed to generate final report' });

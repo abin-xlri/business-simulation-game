@@ -1,9 +1,19 @@
-import { PrismaClient, Session, SessionTask, GroupTaskType } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { getIO } from './io';
 
 const prisma = new PrismaClient();
 
-const TASK_DURATIONS_MINUTES: Record<SessionTask, number> = {
+type SessionTaskValue =
+  | 'LOBBY'
+  | 'ROUND1_TASK1'
+  | 'ROUND1_TASK2'
+  | 'ROUND2_MARKET_SELECTION'
+  | 'ROUND2_BUDGET_ALLOCATION'
+  | 'ROUND3_CRISIS_WEB'
+  | 'ROUND3_REACTIVATION_CHALLENGE'
+  | 'COMPLETED';
+
+const TASK_DURATIONS_MINUTES: Record<SessionTaskValue, number> = {
   LOBBY: 0,
   ROUND1_TASK1: 20,
   ROUND1_TASK2: 10,
@@ -14,7 +24,7 @@ const TASK_DURATIONS_MINUTES: Record<SessionTask, number> = {
   COMPLETED: 0,
 };
 
-const TASK_SEQUENCE: SessionTask[] = [
+const TASK_SEQUENCE: SessionTaskValue[] = [
   'ROUND1_TASK1',
   'ROUND1_TASK2',
   'ROUND2_MARKET_SELECTION',
@@ -22,13 +32,13 @@ const TASK_SEQUENCE: SessionTask[] = [
   'ROUND3_CRISIS_WEB',
   'ROUND3_REACTIVATION_CHALLENGE',
   'COMPLETED',
-] as SessionTask[];
+];
 
 class SessionOrchestrator {
   private timeouts: Map<string, NodeJS.Timeout> = new Map();
-  private softState: Map<string, { task: SessionTask; taskStartedAt: Date; endsAt: Date | null }> = new Map();
+  private softState: Map<string, { task: SessionTaskValue; taskStartedAt: Date; endsAt: Date | null }> = new Map();
 
-  public async startSimulation(sessionId: string): Promise<Session> {
+  public async startSimulation(sessionId: string): Promise<any> {
     const session = await prisma.session.findUnique({ where: { id: sessionId } });
     if (!session || session.task !== 'LOBBY') {
       throw new Error('Simulation cannot be started or is already running.');
@@ -39,6 +49,7 @@ class SessionOrchestrator {
       await prisma.session.update({
         where: { id: sessionId },
         data: {
+          status: 'ACTIVE',
           startedAt: now,
           endsAt: new Date(now.getTime() + 90 * 60 * 1000),
         },
@@ -73,9 +84,9 @@ class SessionOrchestrator {
     }
   }
 
-  private async setTask(sessionId: string, task: SessionTask): Promise<Session> {
+  private async setTask(sessionId: string, task: SessionTaskValue): Promise<any> {
     const now = new Date();
-    let updatedSession: Session | null = null;
+    let updatedSession: any | null = null;
     try {
       updatedSession = await prisma.session.update({
         where: { id: sessionId },
@@ -125,23 +136,23 @@ class SessionOrchestrator {
           let groupIndex = 1;
           for (let i = 0; i < userSessions.length; i += chunkSize) {
             const members = userSessions.slice(i, i + chunkSize);
-            await prisma.group.create({
+           await prisma.group.create({
               data: {
                 sessionId,
                 name: `Group ${groupIndex++}`,
-                taskType: GroupTaskType.MARKET_SELECTION,
+                taskType: 'MARKET_SELECTION' as any,
                 members: {
-                  create: members.map((m, idx) => ({ userId: m.userId, role: idx === 0 ? 'LEADER' : 'MEMBER' })),
+                  create: members.map((m: { userId: string }, idx: number) => ({ userId: m.userId, role: (idx === 0 ? 'LEADER' : 'MEMBER') as any })),
                 },
               },
             });
           }
         } else {
           // Ensure taskType is set to MARKET_SELECTION for all groups
-          await prisma.group.updateMany({ where: { sessionId }, data: { taskType: GroupTaskType.MARKET_SELECTION } });
+          await prisma.group.updateMany({ where: { sessionId }, data: { taskType: 'MARKET_SELECTION' as any } });
         }
       } else if (task === 'ROUND2_BUDGET_ALLOCATION') {
-        await prisma.group.updateMany({ where: { sessionId }, data: { taskType: GroupTaskType.BUDGET_ALLOCATION } });
+        await prisma.group.updateMany({ where: { sessionId }, data: { taskType: 'BUDGET_ALLOCATION' as any } });
       }
     } catch (err) {
       console.warn('Group orchestration step failed:', (err as Error).message);

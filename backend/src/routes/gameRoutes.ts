@@ -4,8 +4,8 @@ import { GameController } from '../controllers/gameController';
 const router = Router();
 const gameController = new GameController();
 
-// GET /api/game/state - Get current game state
-router.get('/state', gameController.getGameState);
+// GET /api/game/:sessionId/state - Get current game state
+router.get('/:sessionId/state', gameController.getGameState);
 
 // GET /api/game/market-data - Get market data
 router.get('/market-data', gameController.getMarketData);
@@ -13,19 +13,19 @@ router.get('/market-data', gameController.getMarketData);
 // GET /api/game/events - Get game events
 router.get('/events', gameController.getGameEvents);
 
-// POST /api/game/start - Start new game
-router.post('/start', gameController.startGame);
+// POST /api/game/:sessionId/start - Start new game
+router.post('/:sessionId/start', gameController.startGame);
 
-// POST /api/game/pause - Pause game
-router.post('/pause', gameController.pauseGame);
+// POST /api/game/:sessionId/pause - Pause game
+router.post('/:sessionId/pause', gameController.pauseGame);
 
-// POST /api/game/resume - Resume game
-router.post('/resume', gameController.resumeGame);
+// POST /api/game/:sessionId/resume - Resume game
+router.post('/:sessionId/resume', gameController.resumeGame);
 
-// POST /api/game/end - End game
-router.post('/end', gameController.endGame);
+// POST /api/game/:sessionId/end - End game
+router.post('/:sessionId/end', gameController.endGame);
 
-// GET /api/game/leaderboard - Get leaderboard
-router.get('/leaderboard', gameController.getLeaderboard);
+// GET /api/game/:sessionId/leaderboard - Get leaderboard
+router.get('/:sessionId/leaderboard', gameController.getLeaderboard);
 
 export default router; 

@@ -43,12 +43,14 @@ const createGroup = async (req, res) => {
                 error: `Invalid member IDs: ${invalidMemberIds.join(', ')}`
             });
         }
+        // Use provided taskType when available (defaults to MARKET_SELECTION)
+        const resolvedTaskType = taskType === 'BUDGET_ALLOCATION' ? 'BUDGET_ALLOCATION' : 'MARKET_SELECTION';
         // Create group
         const group = await prisma.group.create({
             data: {
                 sessionId,
                 name,
-                taskType: taskType,
+                taskType: resolvedTaskType,
                 members: {
                     create: memberIds.map((memberId, index) => ({
                         userId: memberId,

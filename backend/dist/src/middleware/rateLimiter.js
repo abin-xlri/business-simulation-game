@@ -14,7 +14,7 @@ exports.apiLimiter = (0, express_rate_limit_1.default)({
     legacyHeaders: false,
     skip: (req) => {
         // Skip rate limiting for health checks
-        return req.path === '/api/health';
+        return req.path === '/health';
     }
 });
 // Authentication rate limiter

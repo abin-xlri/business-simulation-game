@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GroupSocketHandler = void 0;
 const client_1 = require("@prisma/client");
 const jwt_1 = require("../utils/jwt");
+// Importing enums from @prisma/client caused type issues in some environments; use string literals
 const groupData_1 = require("../constants/groupData");
 const prisma = new client_1.PrismaClient();
 class GroupSocketHandler {
@@ -45,6 +46,18 @@ class GroupSocketHandler {
     setupEventHandlers() {
         this.io.on('connection', (socket) => {
             console.log(`User ${socket.userId} connected`);
+            // Join session and admin rooms for orchestration broadcasts
+            try {
+                if (socket.sessionId) {
+                    socket.join(socket.sessionId);
+                }
+                if (socket.userRole === 'ADMIN') {
+                    socket.join('admins');
+                }
+            }
+            catch (e) {
+                console.warn('Room join failed:', e.message);
+            }
             // Group Management Events
             socket.on('create-group', this.handleCreateGroup.bind(this, socket));
             socket.on('join-group', this.handleJoinGroup.bind(this, socket));
@@ -558,10 +571,21 @@ class GroupSocketHandler {
     }
     async sendSystemMessage(groupId, message) {
         try {
+            // Attempt to find or create a "System" user to avoid FK violations
+            let systemUser = await prisma.user.findFirst({ where: { email: 'system@internal' } });
+            if (!systemUser) {
+                systemUser = await prisma.user.create({
+                    data: {
+                        email: 'system@internal',
+                        name: 'System',
+                        password: '!' // not used
+                    }
+                });
+            }
             const systemMessage = await prisma.groupMessage.create({
                 data: {
                     groupId,
-                    userId: 'system',
+                    userId: systemUser.id,
                     message,
                     messageType: 'SYSTEM'
                 }

@@ -247,7 +247,7 @@ class ScoringController {
             return null;
         }
         const totalMessages = userGroups.reduce((sum, group) => sum + group.messages.length, 0);
-        const leadershipRoles = userGroups.filter(group => group.members.find(m => m.userId === userId)?.role === 'LEADER').length;
+        const leadershipRoles = userGroups.filter((group) => group.members.find((m) => m.userId === userId)?.role === 'LEADER').length;
         const participationScore = Math.min(100, (totalMessages * 10) + (leadershipRoles * 20));
         const collaborationScore = Math.min(100, (userGroups.length * 25) + (totalMessages * 5));
         return {
@@ -587,16 +587,18 @@ class ScoringController {
                     generatedAt: new Date()
                 }
             });
-            return {
-                id: finalReport.id,
-                sessionId: finalReport.sessionId,
-                userId: finalReport.userId,
-                totalScore: finalReport.totalScore,
-                rank: finalReport.rank,
-                competencyScores: JSON.parse(finalReport.competencyScores),
-                feedback: JSON.parse(finalReport.feedback),
-                generatedAt: finalReport.generatedAt.toISOString()
-            };
+            res.json({
+                report: {
+                    id: finalReport.id,
+                    sessionId: finalReport.sessionId,
+                    userId: finalReport.userId,
+                    totalScore: finalReport.totalScore,
+                    rank: finalReport.rank,
+                    competencyScores: JSON.parse(finalReport.competencyScores),
+                    feedback: JSON.parse(finalReport.feedback),
+                    generatedAt: finalReport.generatedAt.toISOString()
+                }
+            });
         }
         catch (error) {
             console.error('Error generating final report:', error);

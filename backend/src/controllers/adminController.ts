@@ -9,6 +9,71 @@ import { sessionOrchestrator } from '../services/sessionOrchestrator';
 const prisma = new PrismaClient();
 
 export class AdminController {
+  // Basic User Management
+  static async listUsers(_req: Request, res: Response) {
+    try {
+      const users = await prisma.user.findMany({
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, email: true, name: true, role: true, createdAt: true, updatedAt: true }
+      });
+      res.json({ success: true, users });
+    } catch (error) {
+      console.error('Error listing users:', error);
+      res.status(500).json({ error: 'Failed to list users' });
+    }
+  }
+
+  static async createUser(req: Request, res: Response) {
+    try {
+      const { email, name, password = 'Welcome123!', role = 'STUDENT' } = req.body as { email: string; name: string; password?: string; role?: 'ADMIN' | 'STUDENT' };
+      const existing = await prisma.user.findUnique({ where: { email } });
+      if (existing) return res.status(400).json({ error: 'User already exists' });
+      const { hashPassword } = await import('../utils/password');
+      const user = await prisma.user.create({
+        data: { email, name, password: await hashPassword(password), role },
+        select: { id: true, email: true, name: true, role: true, createdAt: true }
+      });
+      res.status(201).json({ success: true, user, temporaryPassword: password });
+    } catch (error) {
+      console.error('Error creating user:', error);
+      res.status(500).json({ error: 'Failed to create user' });
+    }
+  }
+
+  static async updateUser(req: Request, res: Response) {
+    try {
+      const { userId } = req.params;
+      const { email, name, role, password } = req.body as Partial<{ email: string; name: string; role: 'ADMIN' | 'STUDENT'; password: string }>;
+      const data: any = {};
+      if (email !== undefined) data.email = email;
+      if (name !== undefined) data.name = name;
+      if (role !== undefined) data.role = role;
+      if (password !== undefined && password.trim().length > 0) {
+        const { hashPassword } = await import('../utils/password');
+        data.password = await hashPassword(password);
+      }
+      const user = await prisma.user.update({
+        where: { id: userId },
+        data,
+        select: { id: true, email: true, name: true, role: true, createdAt: true, updatedAt: true }
+      });
+      res.json({ success: true, user });
+    } catch (error) {
+      console.error('Error updating user:', error);
+      res.status(500).json({ error: 'Failed to update user' });
+    }
+  }
+
+  static async deleteUser(req: Request, res: Response) {
+    try {
+      const { userId } = req.params;
+      await prisma.user.delete({ where: { id: userId } });
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({ error: 'Failed to delete user' });
+    }
+  }
   // Session Management
   static async getSessions(req: Request, res: Response) {
     try {
@@ -62,7 +127,18 @@ export class AdminController {
       });
 
       // Broadcast session update to all connected clients
-      try { getIO().to(sessionId).emit('session-updated', session); } catch {}
+      try {
+        const io = getIO();
+        io.to(sessionId).emit('session-updated', session);
+        // If admin sets status ACTIVE manually, kick off orchestrator if still in LOBBY
+        if (status === 'ACTIVE') {
+          const fresh = await prisma.session.findUnique({ where: { id: sessionId } });
+          if (fresh && (fresh as any).task === 'LOBBY') {
+            // begin the automated flow
+            try { await sessionOrchestrator.startSimulation(sessionId); } catch (e) { console.warn('startSimulation on status change failed:', (e as Error).message) }
+          }
+        }
+      } catch {}
 
       res.json(session);
     } catch (error) {
@@ -71,9 +147,58 @@ export class AdminController {
     }
   }
 
+  static async createSingleSession(req: Request, res: Response) {
+    try {
+      const { name, maxParticipants = 10 } = req.body as { name: string; maxParticipants?: number };
+      const session = await prisma.session.create({
+        data: {
+          name,
+          code: Math.random().toString(36).substring(2, 8).toUpperCase(),
+          maxParticipants,
+          status: 'WAITING',
+        },
+      });
+      res.status(201).json({ success: true, session });
+    } catch (error) {
+      console.error('Error creating session:', error);
+      res.status(500).json({ error: 'Failed to create session' });
+    }
+  }
+
+  static async deleteSession(req: Request, res: Response) {
+    try {
+      const { sessionId } = req.params;
+      // Ensure session exists
+      const existing = await prisma.session.findUnique({ where: { id: sessionId } });
+      if (!existing) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+
+      // Cascade deletes are configured on relations via Prisma schema
+      await prisma.session.delete({ where: { id: sessionId } });
+      try { getIO().to(sessionId).emit('session:deleted', { sessionId }); } catch {}
+      return res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      res.status(500).json({ error: 'Failed to delete session' });
+    }
+  }
+
   static async forceSubmitTask(req: Request, res: Response) {
     try {
-      const { sessionId, userId, taskType } = req.body;
+      const pathSessionId = (req.params as any).sessionId as string | undefined;
+      const { sessionId: bodySessionId, userId, taskType } = req.body as { sessionId?: string; userId: string; taskType: 'route-calculation' | 'partner-selection' | 'crisis-web' | 'reactivation' };
+      const sessionId = pathSessionId || bodySessionId;
+
+      if (!sessionId) {
+        return res.status(400).json({ error: 'sessionId is required' });
+      }
+      if (!userId) {
+        return res.status(400).json({ error: 'userId is required' });
+      }
+      if (!taskType) {
+        return res.status(400).json({ error: 'taskType is required' });
+      }
 
       // Create a default submission based on task type
       let submission;
@@ -584,6 +709,16 @@ export class AdminController {
       // Broadcast to all sessions
       try { sessionIds.forEach((id: string) => getIO().to(id).emit('session:started')); } catch {}
 
+      // Kick off orchestrator for each session still in LOBBY
+      try {
+        const sessions = await prisma.session.findMany({ where: { id: { in: sessionIds } }, select: { id: true, task: true } });
+        for (const s of sessions) {
+          if ((s as any).task === 'LOBBY') {
+            try { await sessionOrchestrator.startSimulation(s.id); } catch (e) { console.warn('startSimulation failed for', s.id, (e as Error).message) }
+          }
+        }
+      } catch (e) { console.warn('Bulk start orchestration skipped:', (e as Error).message) }
+
       res.json({
         success: true,
         message: `Started ${sessionIds.length} sessions`
@@ -591,6 +726,58 @@ export class AdminController {
     } catch (error) {
       console.error('Error starting sessions:', error);
       res.status(500).json({ error: 'Failed to start sessions' });
+    }
+  }
+
+  static async bulkAddUsersToSession(req: Request, res: Response) {
+    try {
+      const { sessionId } = req.params;
+      const { emails } = req.body as { emails: string[] };
+      if (!Array.isArray(emails) || emails.length === 0) {
+        return res.status(400).json({ error: 'Emails array is required' });
+      }
+
+      const session = await prisma.session.findUnique({ where: { id: sessionId } });
+      if (!session) return res.status(404).json({ error: 'Session not found' });
+
+      const normalized = emails.map(e => (e || '').trim().toLowerCase()).filter(Boolean);
+      const results: { email: string; userId: string }[] = [];
+
+      for (const email of normalized) {
+        let user = await prisma.user.findUnique({ where: { email } });
+        if (!user) {
+          const { hashPassword } = await import('../utils/password');
+          user = await prisma.user.create({
+            data: {
+              email,
+              name: email.split('@')[0],
+              password: await hashPassword('Welcome123!'),
+              role: 'STUDENT',
+            },
+          });
+        }
+        const existing = await prisma.userSession.findFirst({ where: { userId: user.id, sessionId } });
+        if (!existing) {
+          await prisma.userSession.create({ data: { userId: user.id, sessionId } });
+        }
+        results.push({ email, userId: user.id });
+      }
+
+      res.json({ success: true, added: results.length, participants: results });
+    } catch (error) {
+      console.error('Error adding users to session:', error);
+      res.status(500).json({ error: 'Failed to add users to session' });
+    }
+  }
+
+  static async removeUserFromSession(req: Request, res: Response) {
+    try {
+      const { sessionId, userId } = req.params as { sessionId: string; userId: string };
+      await prisma.userSession.deleteMany({ where: { sessionId, userId } });
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error removing user from session:', error);
+      res.status(500).json({ error: 'Failed to remove user from session' });
     }
   }
 

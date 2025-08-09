@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { CompetencyScore, FeedbackItem } from '../../shared/types/scoring';
 export declare class ScoringController {
     static initializeCompetencies(): Promise<void>;
     static calculateScores(req: Request, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
@@ -21,16 +20,7 @@ export declare class ScoringController {
     private static calculateCompetencyScores;
     private static calculateTaskBreakdown;
     private static calculateCompetencyBreakdown;
-    static generateFinalReport(req: Request, res: Response): Promise<{
-        id: string;
-        sessionId: string;
-        userId: string;
-        totalScore: number;
-        rank: number;
-        competencyScores: CompetencyScore[];
-        feedback: FeedbackItem[];
-        generatedAt: string;
-    } | undefined>;
+    static generateFinalReport(req: Request, res: Response): Promise<void>;
     private static generateFeedback;
     static exportResults(req: Request, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
     private static generateCSV;

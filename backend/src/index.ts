@@ -14,6 +14,10 @@ import crisisRoutes from './routes/crisisRoutes';
 import scoringRoutes from './routes/scoringRoutes';
 import adminRoutes from './routes/adminRoutes';
 import healthRoutes from './routes/healthRoutes';
+import gameRoutes from './routes/gameRoutes';
+import companyRoutes from './routes/companyRoutes';
+// player routes file exists under routes directory
+import playerRoutes from './routes/playerRoutes';
 
 // Middleware
 import { requestLogger } from './middleware/requestLogger';
@@ -33,10 +37,6 @@ console.log('Build timestamp: ' + new Date().toISOString());
 
 // Create Express app
 const app = express();
-
-// Enable trust proxy when running behind a reverse proxy
-app.set('trust proxy', true);
-
 const server = createServer(app);
 
 // Normalize and support multiple CORS origins (comma-separated), trim trailing slashes
@@ -49,7 +49,14 @@ const parseOrigins = (value?: string): string[] => {
     .map(s => s.replace(/\/$/, ''));
 };
 
-const allowedOrigins = parseOrigins(process.env.CORS_ORIGIN) || ['http://localhost:3000'];
+const allowedOrigins = Array.from(
+  new Set([
+    ...parseOrigins(process.env.CORS_ORIGIN),
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173'
+  ])
+).filter(Boolean);
 
 // Create Socket.io server
 const io = new Server(server, {
@@ -107,6 +114,9 @@ app.use('/api/groups', groupRoutes);
 app.use('/api/crisis', crisisRoutes);
 app.use('/api/scoring', scoringRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/game', gameRoutes);
+app.use('/api/companies', companyRoutes);
+app.use('/api/players', playerRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

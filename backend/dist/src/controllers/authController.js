@@ -13,6 +13,32 @@ function isAdminEmail(targetEmail) {
         .filter(Boolean);
     return list.includes((targetEmail || '').trim().toLowerCase());
 }
+function isAdminDomain(targetEmail) {
+    const domains = (process.env.ADMIN_EMAIL_DOMAINS || '')
+        .split(',')
+        .map(d => d.trim().toLowerCase().replace(/^@/, ''))
+        .filter(Boolean);
+    const email = (targetEmail || '').trim().toLowerCase();
+    return domains.some(domain => email.endsWith(`@${domain}`));
+}
+async function shouldPromoteToAdmin(targetEmail) {
+    // Explicit allow via ADMIN_EMAILS
+    if (isAdminEmail(targetEmail))
+        return true;
+    // Allow via domain allowlist
+    if (isAdminDomain(targetEmail))
+        return true;
+    // Bootstrap: if no admins exist yet, promote the first authenticated user
+    try {
+        const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } });
+        if (adminCount === 0)
+            return true;
+    }
+    catch {
+        // If count fails for some reason, do not promote silently
+    }
+    return false;
+}
 const register = async (req, res) => {
     try {
         // Check for validation errors
@@ -52,8 +78,8 @@ const register = async (req, res) => {
                 createdAt: true
             }
         });
-        // Auto-promote to admin if email is in ADMIN_EMAILS
-        if (isAdminEmail(email) && user.role !== 'ADMIN') {
+        // Auto-promote to admin (ADMIN_EMAILS, ADMIN_EMAIL_DOMAINS, or bootstrap if no admins exist)
+        if ((await shouldPromoteToAdmin(email)) && user.role !== 'ADMIN') {
             user = await prisma.user.update({
                 where: { id: user.id },
                 data: { role: 'ADMIN' },
@@ -98,8 +124,8 @@ const login = async (req, res) => {
         if (!isValidPassword) {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
-        // Auto-promote to admin if email is in ADMIN_EMAILS
-        if (isAdminEmail(email) && user.role !== 'ADMIN') {
+        // Auto-promote to admin (ADMIN_EMAILS, ADMIN_EMAIL_DOMAINS, or bootstrap if no admins exist)
+        if ((await shouldPromoteToAdmin(email)) && user.role !== 'ADMIN') {
             user = await prisma.user.update({
                 where: { id: user.id },
                 data: { role: 'ADMIN' }
@@ -251,7 +277,10 @@ const getCurrentSession = async (req, res) => {
                 status: userSession.session.status,
                 currentRound: userSession.session.currentRound,
                 maxParticipants: userSession.session.maxParticipants,
-                participants: userSession.session.userSessions.map(us => ({
+                task: userSession.session.task,
+                taskStartedAt: userSession.session.taskStartedAt,
+                endsAt: userSession.session.endsAt,
+                participants: userSession.session.userSessions.map((us) => ({
                     id: us.user.id,
                     name: us.user.name,
                     email: us.user.email,

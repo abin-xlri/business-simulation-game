@@ -18,6 +18,10 @@ const crisisRoutes_1 = __importDefault(require("./routes/crisisRoutes"));
 const scoringRoutes_1 = __importDefault(require("./routes/scoringRoutes"));
 const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
 const healthRoutes_1 = __importDefault(require("./routes/healthRoutes"));
+const gameRoutes_1 = __importDefault(require("./routes/gameRoutes"));
+const companyRoutes_1 = __importDefault(require("./routes/companyRoutes"));
+// player routes file exists under routes directory
+const playerRoutes_1 = __importDefault(require("./routes/playerRoutes"));
 // Middleware
 const requestLogger_1 = require("./middleware/requestLogger");
 const errorHandler_1 = require("./middleware/errorHandler");
@@ -25,6 +29,7 @@ const rateLimiter_1 = require("./middleware/rateLimiter");
 // Socket handlers
 const groupSocketHandler_1 = require("./socket/groupSocketHandler");
 const socketService_1 = require("./services/socketService");
+const io_1 = require("./services/io");
 // Load environment variables
 dotenv_1.default.config();
 console.log('=== BUSINESS SIMULATION SERVER (TypeScript) ===');
@@ -42,7 +47,12 @@ const parseOrigins = (value) => {
         .filter(Boolean)
         .map(s => s.replace(/\/$/, ''));
 };
-const allowedOrigins = parseOrigins(process.env.CORS_ORIGIN) || ['http://localhost:3000'];
+const allowedOrigins = Array.from(new Set([
+    ...parseOrigins(process.env.CORS_ORIGIN),
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173'
+])).filter(Boolean);
 // Create Socket.io server
 const io = new socket_io_1.Server(server, {
     cors: {
@@ -59,6 +69,7 @@ const io = new socket_io_1.Server(server, {
     }
 });
 // Initialize socket handlers
+(0, io_1.setIO)(io);
 new groupSocketHandler_1.GroupSocketHandler(io);
 new socketService_1.SocketService(io);
 // Global middleware
@@ -98,6 +109,9 @@ app.use('/api/groups', groupRoutes_1.default);
 app.use('/api/crisis', crisisRoutes_1.default);
 app.use('/api/scoring', scoringRoutes_1.default);
 app.use('/api/admin', adminRoutes_1.default);
+app.use('/api/game', gameRoutes_1.default);
+app.use('/api/companies', companyRoutes_1.default);
+app.use('/api/players', playerRoutes_1.default);
 // 404 handler
 app.use('*', (req, res) => {
     res.status(404).json({ success: false, message: `Route not found: ${req.method} ${req.originalUrl}` });

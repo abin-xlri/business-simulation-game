@@ -4,6 +4,10 @@ export interface SessionSummary {
     code: string;
     status: 'WAITING' | 'ACTIVE' | 'PAUSED' | 'COMPLETED';
     currentRound: number;
+    task?: 'LOBBY' | 'ROUND1_TASK1' | 'ROUND1_TASK2' | 'ROUND2_MARKET_SELECTION' | 'ROUND2_BUDGET_ALLOCATION' | 'ROUND3_CRISIS_WEB' | 'ROUND3_REACTIVATION_CHALLENGE' | 'COMPLETED';
+    startedAt?: string | null;
+    endsAt?: string | null;
+    taskStartedAt?: string | null;
     maxParticipants: number;
     createdAt: string;
     updatedAt: string;

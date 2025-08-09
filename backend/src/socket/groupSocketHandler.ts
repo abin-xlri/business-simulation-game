@@ -1,12 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import { PrismaClient } from '@prisma/client';
 import { verifyToken } from '../utils/jwt';
-import {
-  GroupTaskType,
-  MessageType,
-  DecisionStatus,
-  GroupStatus
-} from '@prisma/client';
+// Importing enums from @prisma/client caused type issues in some environments; use string literals
 import {
   MARKET_COUNTRIES,
   BUDGET_FUNCTIONS,
@@ -82,6 +77,32 @@ export class GroupSocketHandler {
         console.warn('Room join failed:', (e as Error).message);
       }
 
+      // Allow client to explicitly join a session room after joining via HTTP
+      socket.on('user:join-session-room', async (data: { sessionId: string }) => {
+        try {
+          if (!socket.userId) {
+            socket.emit('error', { message: 'Authentication required' });
+            return;
+          }
+          const { sessionId } = data || ({} as any);
+          if (!sessionId) {
+            socket.emit('error', { message: 'sessionId required' });
+            return;
+          }
+          const userSession = await prisma.userSession.findFirst({ where: { userId: socket.userId, sessionId } });
+          if (!userSession) {
+            socket.emit('error', { message: 'Not a participant of this session' });
+            return;
+          }
+          socket.join(sessionId);
+          socket.sessionId = sessionId;
+          socket.emit('session:joined', { sessionId });
+        } catch (err) {
+          console.error('user:join-session-room error:', err);
+          socket.emit('error', { message: 'Failed to join session room' });
+        }
+      });
+
       // Group Management Events
       socket.on('create-group', this.handleCreateGroup.bind(this, socket));
       socket.on('join-group', this.handleJoinGroup.bind(this, socket));
@@ -135,7 +156,7 @@ export class GroupSocketHandler {
         data: {
           sessionId,
           name,
-          taskType: taskType as GroupTaskType,
+          taskType: taskType,
           members: {
             create: memberIds.map((userId: string, index: number) => ({
               userId,
@@ -315,7 +336,7 @@ export class GroupSocketHandler {
           groupId,
           userId: socket.userId!,
           message,
-          messageType: messageType as MessageType
+          messageType: messageType
         },
         include: {
           user: {
@@ -357,7 +378,7 @@ export class GroupSocketHandler {
         data: {
           groupId,
           userId: socket.userId!,
-          taskType: taskType as GroupTaskType,
+          taskType: taskType,
           decision,
           status: 'PENDING'
         }
@@ -680,10 +701,22 @@ export class GroupSocketHandler {
 
   private async sendSystemMessage(groupId: string, message: string) {
     try {
+      // Attempt to find or create a "System" user to avoid FK violations
+      let systemUser = await prisma.user.findFirst({ where: { email: 'system@internal' } });
+      if (!systemUser) {
+        systemUser = await prisma.user.create({
+          data: {
+            email: 'system@internal',
+            name: 'System',
+            password: '!' // not used
+          }
+        });
+      }
+
       const systemMessage = await prisma.groupMessage.create({
         data: {
           groupId,
-          userId: 'system',
+          userId: systemUser.id,
           message,
           messageType: 'SYSTEM'
         }

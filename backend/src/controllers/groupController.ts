@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 
 export const createGroup = async (req: Request, res: Response) => {
   try {
-    const { sessionId, name, taskType, memberIds } = req.body;
+    const { sessionId, name, taskType, memberIds } = req.body as { sessionId: string; name: string; taskType?: 'MARKET_SELECTION' | 'BUDGET_ALLOCATION'; memberIds: string[] };
     const userId = (req as any).user?.userId;
 
     if (!userId) {
@@ -53,12 +53,16 @@ export const createGroup = async (req: Request, res: Response) => {
       });
     }
 
+    // Use provided taskType when available (defaults to MARKET_SELECTION)
+    const resolvedTaskType: 'MARKET_SELECTION' | 'BUDGET_ALLOCATION' =
+      taskType === 'BUDGET_ALLOCATION' ? 'BUDGET_ALLOCATION' : 'MARKET_SELECTION';
+
     // Create group
     const group = await prisma.group.create({
       data: {
         sessionId,
         name,
-        taskType: taskType as GroupTaskType,
+        taskType: resolvedTaskType as GroupTaskType,
         members: {
           create: memberIds.map((memberId: string, index: number) => ({
             userId: memberId,

@@ -9,10 +9,20 @@ const router = Router();
 router.use(authenticateToken);
 router.use(requireAdmin);
 
+// User Management routes
+router.get('/users', AdminController.listUsers);
+router.post('/users', AdminController.createUser);
+router.patch('/users/:userId', AdminController.updateUser);
+router.delete('/users/:userId', AdminController.deleteUser);
+
 // Session Management routes
 router.get('/sessions', AdminController.getSessions);
 router.patch('/sessions/:sessionId/status', AdminController.updateSessionStatus);
 router.post('/sessions/:sessionId/force-submit', AdminController.forceSubmitTask);
+router.post('/sessions', AdminController.createSingleSession);
+router.delete('/sessions/:sessionId', AdminController.deleteSession);
+router.post('/sessions/:sessionId/participants', AdminController.bulkAddUsersToSession);
+router.delete('/sessions/:sessionId/participants/:userId', AdminController.removeUserFromSession);
 router.post('/sessions/:sessionId/force-submit-all', AdminController.forceSubmitAllCurrentTask);
 
 // Real-time Monitoring routes

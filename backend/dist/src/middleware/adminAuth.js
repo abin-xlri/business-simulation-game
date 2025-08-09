@@ -6,12 +6,16 @@ const prisma = new client_1.PrismaClient();
 const requireAdmin = async (req, res, next) => {
     try {
         // Get user from request (set by authenticateToken middleware)
-        const user = req.user;
-        if (!user) {
+        const tokenUser = req.user;
+        if (!tokenUser) {
             return res.status(401).json({ error: 'Authentication required' });
         }
-        // Check if user is admin
-        if (user.role !== 'ADMIN') {
+        // Always verify role against database to avoid stale token role
+        const dbUser = await prisma.user.findUnique({ where: { id: tokenUser.userId }, select: { role: true } });
+        if (!dbUser) {
+            return res.status(401).json({ error: 'User not found' });
+        }
+        if (dbUser.role !== 'ADMIN') {
             return res.status(403).json({ error: 'Admin privileges required' });
         }
         next();

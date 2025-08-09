@@ -61,8 +61,8 @@ class MonitoringService {
                 ...this.metrics,
                 timestamp: new Date().toISOString()
             });
-            // Broadcast metrics to admin clients
-            this.io.to('admin').emit('metrics-update', this.metrics);
+            // Broadcast metrics to admin clients (standardize room name)
+            this.io.to('admins').emit('metrics-update', this.metrics);
         }
         catch (error) {
             console.error('Error updating metrics:', error);
