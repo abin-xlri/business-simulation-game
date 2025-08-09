@@ -55,6 +55,11 @@ export class SocketService {
       socket.on('game:request', (request: any) => {
         this.handleGameRequest(socket, request);
       });
+
+      // Provide explicit error feedback for clients stuck on "Connecting..."
+      try {
+        socket.emit('notification', { success: false, message: 'connected', type: 'info' });
+      } catch {}
     });
   }
 
@@ -340,7 +345,7 @@ export class SocketService {
         }
       });
 
-      return userSessions.map(userSession => ({
+      return userSessions.map((userSession: { user: { id: string; name: string }, joinedAt: Date }) => ({
         id: userSession.user.id,
         name: userSession.user.name,
         joinedAt: userSession.joinedAt
